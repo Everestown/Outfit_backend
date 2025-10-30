@@ -1,0 +1,23 @@
+server:
+  address: ":8080"
+  env: development
+
+database:
+  url: "postgresql://postgres:postgres@localhost:5432/clothes_store_dev?sslmode=disable"
+
+jwt:
+  secret: "your-jwt-secret-key"
+
+log:
+  level: "info"
+
+cors:
+  allowed_origins:
+    - "http://localhost:3000"
+
+modules:
+  enabled:
+    auth: true
+    products: true
+    cart: true
+    orders: true
