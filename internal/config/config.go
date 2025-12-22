@@ -15,6 +15,7 @@ type Config struct {
 
 type ServerConfig struct {
 	Address string
+	Env     string
 }
 type DatabaseConfig struct {
 	URL string
@@ -54,19 +55,20 @@ func Load() *Config {
 
 	return &Config{
 		Server: ServerConfig{
-			Address: viper.GetString("SERVER_ADDRESS"),
+			Address: viper.GetString("server.address"),
+			Env:     viper.GetString("server.env"),
 		},
 		Database: DatabaseConfig{
-			URL: viper.GetString("DATABASE_URL"),
+			URL: viper.GetString("database.url"),
 		},
 		JWT: JWTConfig{
-			Secret: viper.GetString("JWT_SECRET"),
+			Secret: viper.GetString("jwt.secret"),
 		},
 		Log: LogConfig{
-			Level: viper.GetString("LOG_LEVEL"),
+			Level: viper.GetString("log.level"),
 		},
 		CORS: CORSConfig{
-			AllowedOrigins: viper.GetStringSlice("CORS_ALLOWED_ORIGINS"),
+			AllowedOrigins: viper.GetStringSlice("cors.allowed_origins"),
 		},
 		Modules: ModulesConfig{
 			Enabled: enabledModules,

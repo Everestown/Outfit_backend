@@ -1,14 +1,18 @@
 package app
 
 import (
+	"github.com/Everestown/Outfit_backend/internal/modules/auth"
+	"github.com/Everestown/Outfit_backend/internal/modules/cart"
+	"github.com/Everestown/Outfit_backend/internal/modules/orders"
+	"github.com/Everestown/Outfit_backend/internal/modules/products"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
 	"github.com/Everestown/Outfit_backend/internal/config"
 	"github.com/Everestown/Outfit_backend/internal/core/module"
 	"github.com/Everestown/Outfit_backend/internal/logger"
-	"github.com/Everestown/Outfit_backend/internal/pkg/jwt"
 	"github.com/Everestown/Outfit_backend/internal/pkg/database"
+	"github.com/Everestown/Outfit_backend/internal/pkg/jwt"
 	"github.com/Everestown/Outfit_backend/internal/pkg/middleware"
 	"github.com/Everestown/Outfit_backend/internal/pkg/swagger"
 )
@@ -25,12 +29,12 @@ type App struct {
 func NewApp(cfg *config.Config) *App {
 	l := logger.New(cfg.Log.Level)
 
-	db, err := database.NewPostgresDB(cfg.Database.URL)
+	db, err := database.NewPostgresDB(&cfg.Database)
 	if err != nil {
 		l.Fatal("Failed to connect to database", logger.Error(err))
 	}
 
-	jwtManager := jwt.NewJWTManager(cfg.JWT.Secret)
+	jwtManager := jwt.NewJWTManager(cfg.JWT.Secret, db)
 
 	router := gin.Default()
 
@@ -50,7 +54,7 @@ func NewApp(cfg *config.Config) *App {
 
 func (a *App) setupMiddleware() {
 	a.router.Use(gin.Recovery())
-	a.router.Use(middleware.CORS(a.config.CORS))
+	a.router.Use(middleware.CORSMiddleware(&a.config.CORS))
 
 	if a.config.Server.Env == "development" {
 		swagger.SetupSwagger(a.router)
@@ -60,16 +64,28 @@ func (a *App) setupMiddleware() {
 func (a *App) RegisterCoreModules() {
 	// Регистрация стандартных модулей из конфига
 	if a.config.Modules.Enabled["auth"] {
-		a.RegisterModule(auth.NewAuthModule(a.db, a.jwt))
+		err := a.RegisterModule(auth.NewAuthModule(a.db, a.jwt))
+		if err != nil {
+			return
+		}
 	}
 	if a.config.Modules.Enabled["products"] {
-		a.RegisterModule(products.NewProductsModule(a.db))
+		err := a.RegisterModule(products.NewProductsModule(a.db))
+		if err != nil {
+			return
+		}
 	}
 	if a.config.Modules.Enabled["cart"] {
-		a.RegisterModule(cart.NewCartModule(a.db))
+		err := a.RegisterModule(cart.NewCartModule(a.db))
+		if err != nil {
+			return
+		}
 	}
 	if a.config.Modules.Enabled["orders"] {
-		a.RegisterModule(orders.NewOrdersModule(a.db))
+		err := a.RegisterModule(orders.NewOrdersModule(a.db))
+		if err != nil {
+			return
+		}
 	}
 }
 

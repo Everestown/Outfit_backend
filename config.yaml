@@ -3,17 +3,20 @@ server:
   env: development
 
 database:
-  url: "postgresql://postgres:postgres@localhost:5432/clothes_store_dev?sslmode=disable"
+  url: "postgresql://postgres:postgres@localhost:5432/outfit?sslmode=disable"
+
+redis:
+  url: "redis://localhost:6379"
 
 jwt:
-  secret: "your-jwt-secret-key"
+  secret: "secret"
 
 log:
   level: "info"
 
 cors:
   allowed_origins:
-    - "http://localhost:3000"
+    - "http://localhost:5173"
 
 modules:
   enabled:
