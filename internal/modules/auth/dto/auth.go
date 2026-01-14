@@ -5,16 +5,16 @@ import "github.com/Everestown/Outfit_backend/internal/models"
 type RegisterRequest struct {
 	Surname    string `json:"surname" binding:"required"`
 	Name       string `json:"name" binding:"required"`
-	Patronymic string `json:"patronymic"`
+	Patronymic string `json:"patronymic" validate:"omitempty,min=5,max=25,numeric"`
 	Username   string `json:"username" binding:"required"`
-	Phone      string `json:"phone"`
+	Phone      string `json:"phone" validate:"omitempty,min=5,max=25,numeric"`
 	Email      string `json:"email" binding:"required,email"`
-	Password   string `json:"password" binding:"required,min=6"`
+	Password   string `json:"password" binding:"required,min=8,max=255"`
 }
 
 type LoginRequest struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required"`
+	Identifier string `json:"identifier" binding:"required"`
+	Password   string `json:"password" binding:"required"`
 }
 
 type TokenResponse struct {
@@ -23,4 +23,9 @@ type TokenResponse struct {
 	TokenType    string       `json:"token_type"`
 	ExpiresIn    int          `json:"expires_in"`
 	User         *models.User `json:"user"`
+}
+
+type SessionContext struct {
+	IP         string
+	DeviceInfo string
 }

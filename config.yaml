@@ -1,6 +1,6 @@
 server:
   address: ":8080"
-  env: development
+  env: "development"
 
 database:
   url: "postgresql://postgres:postgres@localhost:5432/outfit?sslmode=disable"

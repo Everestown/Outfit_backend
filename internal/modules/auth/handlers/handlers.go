@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/Everestown/Outfit_backend/internal/modules/auth/dto"
@@ -28,7 +29,12 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	tokens, err := h.service.Register(req)
+	ctx := dto.SessionContext{
+		IP:         getClientIP(c),
+		DeviceInfo: c.GetHeader("User-Agent"),
+	}
+
+	tokens, err := h.service.Register(req, ctx)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -39,12 +45,20 @@ func (h *Handler) Register(c *gin.Context) {
 
 func (h *Handler) Login(c *gin.Context) {
 	var req dto.LoginRequest
+
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	tokens, err := h.service.Login(req)
+	fmt.Printf("REQ: %+v\n", req)
+
+	ctx := dto.SessionContext{
+		IP:         getClientIP(c),
+		DeviceInfo: c.GetHeader("User-Agent"),
+	}
+
+	tokens, err := h.service.Login(req, ctx)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
@@ -57,13 +71,17 @@ func (h *Handler) Refresh(c *gin.Context) {
 	var req struct {
 		RefreshToken string `json:"refresh_token" binding:"required"`
 	}
-
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	tokens, err := h.service.RefreshToken(req.RefreshToken)
+	ctx := dto.SessionContext{
+		IP:         getClientIP(c),
+		DeviceInfo: c.GetHeader("User-Agent"),
+	}
+
+	tokens, err := h.service.RefreshToken(req.RefreshToken, ctx)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
@@ -101,4 +119,15 @@ func (h *Handler) Profile(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"user": user})
+}
+
+func getClientIP(c *gin.Context) string {
+	ip := c.ClientIP()
+
+	// localhost "::1"
+	if ip == "::1" {
+		return "127.0.0.1"
+	}
+
+	return ip
 }

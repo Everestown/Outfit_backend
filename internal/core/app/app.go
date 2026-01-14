@@ -6,6 +6,7 @@ import (
 	"github.com/Everestown/Outfit_backend/internal/modules/orders"
 	"github.com/Everestown/Outfit_backend/internal/modules/products"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 
 	"github.com/Everestown/Outfit_backend/internal/config"
@@ -31,7 +32,7 @@ func NewApp(cfg *config.Config) *App {
 
 	db, err := database.NewPostgresDB(&cfg.Database)
 	if err != nil {
-		l.Fatal("Failed to connect to database", logger.Error(err))
+		l.Fatal("Failed to connect to database", logger.Err(err))
 	}
 
 	jwtManager := jwt.NewJWTManager(cfg.JWT.Secret, db)
@@ -62,28 +63,33 @@ func (a *App) setupMiddleware() {
 }
 
 func (a *App) RegisterCoreModules() {
-	// Регистрация стандартных модулей из конфига
+	a.logger.Info("Modules enabled", zap.Any("enabled", a.config.Modules.Enabled))
+
 	if a.config.Modules.Enabled["auth"] {
 		err := a.RegisterModule(auth.NewAuthModule(a.db, a.jwt))
 		if err != nil {
+			a.logger.Error("Failed to register auth module", logger.Err(err))
 			return
 		}
 	}
 	if a.config.Modules.Enabled["products"] {
 		err := a.RegisterModule(products.NewProductsModule(a.db))
 		if err != nil {
+			a.logger.Error("Failed to register products module", logger.Err(err))
 			return
 		}
 	}
 	if a.config.Modules.Enabled["cart"] {
 		err := a.RegisterModule(cart.NewCartModule(a.db))
 		if err != nil {
+			a.logger.Error("Failed to register cart module", logger.Err(err))
 			return
 		}
 	}
 	if a.config.Modules.Enabled["orders"] {
 		err := a.RegisterModule(orders.NewOrdersModule(a.db))
 		if err != nil {
+			a.logger.Error("Failed to register orders module", logger.Err(err))
 			return
 		}
 	}
@@ -102,6 +108,9 @@ func (a *App) GetJWT() *jwt.JWTManager {
 }
 
 func (a *App) SetupRouter() {
+	modules := a.registry.GetAllModules()
+	a.logger.Info("Active modules count", zap.Int("count", len(modules)))
+
 	api := a.router.Group("/api")
 
 	for _, m := range a.registry.GetAllModules() {

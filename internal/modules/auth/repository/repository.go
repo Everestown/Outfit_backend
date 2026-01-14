@@ -1,15 +1,17 @@
 package repository
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"time"
 
 	"github.com/Everestown/Outfit_backend/internal/models"
-	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
 type Repository interface {
 	CreateUser(user *models.User) error
+	GetUserByIdentifier(identifier string) (*models.User, error)
 	GetUserByEmail(email string) (*models.User, error)
 	GetUserByID(id uint) (*models.User, error)
 	CreateUserSession(session *models.UserSession) error
@@ -30,6 +32,12 @@ func (r *repository) CreateUser(user *models.User) error {
 	return r.db.Create(user).Error
 }
 
+func (r *repository) GetUserByIdentifier(identifier string) (*models.User, error) {
+	var user models.User
+	err := r.db.Where("email = ? OR username = ?", identifier, identifier).First(&user).Error
+	return &user, err
+}
+
 func (r *repository) GetUserByEmail(email string) (*models.User, error) {
 	var user models.User
 	err := r.db.Where("email = ?", email).First(&user).Error
@@ -48,11 +56,14 @@ func (r *repository) CreateUserSession(session *models.UserSession) error {
 
 func (r *repository) GetUserSession(refreshToken string) (*models.UserSession, error) {
 	var session models.UserSession
-	hash := hash(refreshToken)
+
+	hash := sha256Hash(refreshToken)
+
 	err := r.db.Where(
 		"refresh_token_hash = ? AND revoked = false AND expires_at > ?",
 		hash, time.Now(),
 	).First(&session).Error
+
 	return &session, err
 }
 
@@ -68,7 +79,7 @@ func (r *repository) DeleteAllUserSessions(userID uint) error {
 		Update("revoked", true).Error
 }
 
-func hash(token string) string {
-	h, _ := bcrypt.GenerateFromPassword([]byte(token), bcrypt.DefaultCost)
-	return string(h)
+func sha256Hash(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:])
 }

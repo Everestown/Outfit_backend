@@ -1,8 +1,9 @@
 package models
 
 import (
-	"gorm.io/gorm"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type User struct {
@@ -31,8 +32,8 @@ type UserSession struct {
 	UserID           uint      `gorm:"not null;index"`
 	RefreshTokenHash string    `gorm:"type:varchar(1024);not null"`
 	JTI              string    `gorm:"type:varchar(256);uniqueIndex;not null"`
-	IP               string    `gorm:"type:inet"`
-	DeviceInfo       string    `gorm:"type:varchar(256)"`
+	IP               *string   `gorm:"type:inet"`
+	DeviceInfo       *string   `gorm:"type:varchar(256)"`
 	CreatedAt        time.Time `gorm:"not null;default:current_timestamp"`
 	LastUsedAt       time.Time `gorm:"not null;default:current_timestamp"`
 	ExpiresAt        time.Time `gorm:"not null"`

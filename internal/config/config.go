@@ -44,13 +44,19 @@ func Load() *Config {
 	}
 
 	// Преобразование map[string]any в map[string]bool
-	enabledModules := make(map[string]bool)
+	/*enabledModules := make(map[string]bool)
 	if rawModules := viper.GetStringMap("modules.enabled"); rawModules != nil {
 		for key, value := range rawModules {
 			if boolVal, ok := value.(bool); ok {
 				enabledModules[key] = boolVal
 			}
 		}
+	}*/
+	enabledModules := map[string]bool{
+		"auth":     viper.GetBool("modules.enabled.auth"),
+		"products": viper.GetBool("modules.enabled.products"),
+		"cart":     viper.GetBool("modules.enabled.cart"),
+		"orders":   viper.GetBool("modules.enabled.orders"),
 	}
 
 	return &Config{

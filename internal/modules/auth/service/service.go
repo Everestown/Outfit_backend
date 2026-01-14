@@ -1,8 +1,12 @@
 package service
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"time"
+
+	"gorm.io/gorm"
 
 	"github.com/Everestown/Outfit_backend/internal/models"
 	"github.com/Everestown/Outfit_backend/internal/modules/auth/dto"
@@ -13,9 +17,9 @@ import (
 )
 
 type Service interface {
-	Register(req dto.RegisterRequest) (*dto.TokenResponse, error)
-	Login(req dto.LoginRequest) (*dto.TokenResponse, error)
-	RefreshToken(refreshToken string) (*dto.TokenResponse, error)
+	Register(req dto.RegisterRequest, ctx dto.SessionContext) (*dto.TokenResponse, error)
+	Login(req dto.LoginRequest, ctx dto.SessionContext) (*dto.TokenResponse, error)
+	RefreshToken(refreshToken string, ctx dto.SessionContext) (*dto.TokenResponse, error)
 	Logout(userID uint) error
 	GetUserByID(userID uint) (*models.User, error)
 }
@@ -29,21 +33,26 @@ func NewService(repo repository.Repository, jwtManager *jwt.JWTManager) Service 
 	return &service{repo: repo, jwt: jwtManager}
 }
 
-func (s *service) Register(req dto.RegisterRequest) (*dto.TokenResponse, error) {
-	if user, _ := s.repo.GetUserByEmail(req.Email); user != nil {
+func (s *service) Register(req dto.RegisterRequest, ctx dto.SessionContext) (*dto.TokenResponse, error) {
+	user, err := s.repo.GetUserByEmail(req.Email)
+	if err == nil && user.ID != 0 {
 		return nil, errors.New("user already exists")
 	}
 
-	hash, _ := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
 
-	user := &models.User{
+	passHash, _ := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+
+	user = &models.User{
 		Surname:      req.Surname,
 		Name:         req.Name,
 		Patronymic:   req.Patronymic,
 		Username:     req.Username,
 		Phone:        req.Phone,
 		Email:        req.Email,
-		PasswordHash: string(hash),
+		PasswordHash: string(passHash),
 		RoleID:       1,
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
@@ -53,11 +62,11 @@ func (s *service) Register(req dto.RegisterRequest) (*dto.TokenResponse, error) 
 		return nil, err
 	}
 
-	return s.tokens(user)
+	return s.tokens(user, ctx)
 }
 
-func (s *service) Login(req dto.LoginRequest) (*dto.TokenResponse, error) {
-	user, err := s.repo.GetUserByEmail(req.Email)
+func (s *service) Login(req dto.LoginRequest, ctx dto.SessionContext) (*dto.TokenResponse, error) {
+	user, err := s.repo.GetUserByIdentifier(req.Identifier)
 	if err != nil {
 		return nil, errors.New("invalid credentials")
 	}
@@ -66,19 +75,24 @@ func (s *service) Login(req dto.LoginRequest) (*dto.TokenResponse, error) {
 		return nil, errors.New("invalid credentials")
 	}
 
-	return s.tokens(user)
+	return s.tokens(user, ctx)
 }
 
-func (s *service) RefreshToken(refreshToken string) (*dto.TokenResponse, error) {
+func (s *service) RefreshToken(refreshToken string, ctx dto.SessionContext) (*dto.TokenResponse, error) {
 	session, err := s.repo.GetUserSession(refreshToken)
 	if err != nil {
 		return nil, errors.New("invalid refresh token")
 	}
 
+	// Rotation — старая сессия закрывается
 	_ = s.repo.DeleteUserSession(session.JTI)
 
-	user, _ := s.repo.GetUserByID(session.UserID)
-	return s.tokens(user)
+	user, err := s.repo.GetUserByID(session.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.tokens(user, ctx)
 }
 
 func (s *service) Logout(userID uint) error {
@@ -89,15 +103,20 @@ func (s *service) GetUserByID(userID uint) (*models.User, error) {
 	return s.repo.GetUserByID(userID)
 }
 
-func (s *service) tokens(user *models.User) (*dto.TokenResponse, error) {
+func (s *service) tokens(user *models.User, ctx dto.SessionContext) (*dto.TokenResponse, error) {
 	access, _ := s.jwt.GenerateAccessToken(user.ID, user.TokenVersion)
 	refresh, _ := s.jwt.GenerateRefreshToken(user.ID)
 
+	refreshHash := sha256Hash(refresh)
+
 	session := &models.UserSession{
 		UserID:           user.ID,
-		RefreshTokenHash: hash(refresh),
+		RefreshTokenHash: refreshHash,
 		JTI:              uuid.NewString(),
+		IP:               &ctx.IP,
+		DeviceInfo:       &ctx.DeviceInfo,
 		ExpiresAt:        time.Now().Add(30 * 24 * time.Hour),
+		Revoked:          false,
 	}
 
 	_ = s.repo.CreateUserSession(session)
@@ -111,7 +130,7 @@ func (s *service) tokens(user *models.User) (*dto.TokenResponse, error) {
 	}, nil
 }
 
-func hash(token string) string {
-	h, _ := bcrypt.GenerateFromPassword([]byte(token), bcrypt.DefaultCost)
-	return string(h)
+func sha256Hash(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:])
 }

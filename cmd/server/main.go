@@ -14,11 +14,11 @@ func main() {
 	// Регистрация основных модулей (из конфига)
 	application.RegisterCoreModules()
 
-	// 🔌 Plug-and-play: добавляем новый модуль
+	// 🔌 Plug-and-play: добавление нового модуля
 	// application.RegisterModule(payments.NewPaymentsModule(application.GetDB()))
 
 	// Запуск приложения
 	if err := application.Run(); err != nil {
-		logger.Fatal("Failed to run app", logger.Error(err))
+		logger.Fatal("Failed to run app", logger.Err(err))
 	}
 }
