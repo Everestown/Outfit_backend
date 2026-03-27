@@ -1,11 +1,11 @@
 package handlers
 
 import (
-	"github.com/Everestown/Outfit_backend/internal/modules/cart/service"
 	"net/http"
 	"strconv"
 
 	"github.com/Everestown/Outfit_backend/internal/modules/cart/dto"
+	"github.com/Everestown/Outfit_backend/internal/modules/cart/service"
 	"github.com/gin-gonic/gin"
 )
 
@@ -19,14 +19,10 @@ func NewHandler(service service.Service) *Handler {
 
 func (h *Handler) GetCart(c *gin.Context) {
 	userID := c.GetUint("user_id")
-	if userID == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-		return
-	}
 
 	cart, err := h.service.GetCartByUserID(userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch cart"})
 		return
 	}
 
@@ -35,10 +31,6 @@ func (h *Handler) GetCart(c *gin.Context) {
 
 func (h *Handler) AddItem(c *gin.Context) {
 	userID := c.GetUint("user_id")
-	if userID == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-		return
-	}
 
 	var req dto.AddItemRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -47,7 +39,7 @@ func (h *Handler) AddItem(c *gin.Context) {
 	}
 
 	if err := h.service.AddItemToCart(userID, req.VariantID, req.Quantity); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to add item"})
 		return
 	}
 
@@ -56,10 +48,6 @@ func (h *Handler) AddItem(c *gin.Context) {
 
 func (h *Handler) RemoveItem(c *gin.Context) {
 	userID := c.GetUint("user_id")
-	if userID == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-		return
-	}
 
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -68,7 +56,7 @@ func (h *Handler) RemoveItem(c *gin.Context) {
 	}
 
 	if err := h.service.RemoveItemFromCart(userID, uint(id)); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to remove item"})
 		return
 	}
 

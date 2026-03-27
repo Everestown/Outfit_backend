@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"errors"
 	"time"
 
 	"github.com/Everestown/Outfit_backend/internal/models"
@@ -10,6 +11,7 @@ import (
 
 type Repository interface {
 	GetUserOrders(userID uint) ([]models.Order, error)
+	GetOrderByID(userID uint, orderID uint) (*models.Order, error)
 	CreateOrder(userID uint, req dto.CreateOrderRequest) (*models.Order, error)
 }
 
@@ -27,8 +29,25 @@ func (r *repository) GetUserOrders(userID uint) ([]models.Order, error) {
 		Preload("Items.Variant").
 		Preload("Payment").
 		Where("user_id = ?", userID).
+		Order("created_at DESC").
 		Find(&orders).Error
 	return orders, err
+}
+
+func (r *repository) GetOrderByID(userID uint, orderID uint) (*models.Order, error) {
+	var order models.Order
+	err := r.db.
+		Preload("Items.Variant").
+		Preload("Payment").
+		Where("id = ? AND user_id = ?", orderID, userID).
+		First(&order).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &order, nil
 }
 
 func (r *repository) CreateOrder(userID uint, req dto.CreateOrderRequest) (*models.Order, error) {

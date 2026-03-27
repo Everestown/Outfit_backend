@@ -8,6 +8,7 @@ import (
 type Repository interface {
 	GetAllProducts() ([]models.Product, error)
 	GetProductByID(id uint) (*models.Product, error)
+	GetAllCategories() ([]models.Category, error)
 }
 
 type repository struct {
@@ -37,5 +38,14 @@ func (r *repository) GetProductByID(id uint) (*models.Product, error) {
 		Preload("Variants.Color").
 		Preload("Images").
 		First(&product, id).Error
-	return &product, err
+	if err != nil {
+		return nil, err
+	}
+	return &product, nil
+}
+
+func (r *repository) GetAllCategories() ([]models.Category, error) {
+	var categories []models.Category
+	err := r.db.Order("id ASC").Find(&categories).Error
+	return categories, err
 }
