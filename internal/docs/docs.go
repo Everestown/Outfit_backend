@@ -4,26 +4,40 @@ package docs
 import "github.com/swaggo/swag"
 
 const docTemplate = `{
-    "schemes": {{ marshal .Schemes }},
     "swagger": "2.0",
     "info": {
-        "description": "{{escape .Description}}",
-        "title": "{{.Title}}",
-        "contact": {},
-        "version": "{{.Version}}"
+        "title": "Outfit Backend API",
+        "version": "1.0",
+        "contact": {}
     },
-    "host": "{{.Host}}",
-    "basePath": "{{.BasePath}}",
-    "paths": {}
+    "basePath": "/api",
+    "paths": {
+        "/auth/register": {"post": {"summary": "Register user"}},
+        "/auth/login": {"post": {"summary": "Login user"}},
+        "/auth/refresh": {"post": {"summary": "Refresh token"}},
+        "/auth/logout": {"post": {"summary": "Logout user", "security": [{"BearerAuth": []}]}},
+        "/auth/profile": {"get": {"summary": "Current profile", "security": [{"BearerAuth": []}]}},
+        "/products": {"get": {"summary": "List products"}},
+        "/products/{id}": {"get": {"summary": "Get product by ID"}},
+        "/categories": {"get": {"summary": "List categories"}},
+        "/categories/tree": {"get": {"summary": "Category tree"}},
+        "/cart": {"get": {"summary": "Get user cart", "security": [{"BearerAuth": []}]}},
+        "/cart/items": {"post": {"summary": "Add cart item", "security": [{"BearerAuth": []}]}},
+        "/orders": {"get": {"summary": "List my orders", "security": [{"BearerAuth": []}]}, "post": {"summary": "Create order", "security": [{"BearerAuth": []}]}},
+        "/orders/my": {"get": {"summary": "List my orders (compat)", "security": [{"BearerAuth": []}]}},
+        "/orders/{id}": {"get": {"summary": "Get order by ID", "security": [{"BearerAuth": []}]}}
+    },
+    "securityDefinitions": {
+        "BearerAuth": {"type": "apiKey", "name": "Authorization", "in": "header"}
+    }
 }`
 
-// SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "",
+	Version:          "1.0",
 	Host:             "",
-	BasePath:         "",
+	BasePath:         "/api",
 	Schemes:          []string{},
-	Title:            "",
+	Title:            "Outfit Backend API",
 	Description:      "",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,

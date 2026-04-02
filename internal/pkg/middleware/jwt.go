@@ -1,25 +1,32 @@
 package middleware
 
 import (
-	"github.com/Everestown/Outfit_backend/internal/pkg/jwt"
-	"github.com/gin-gonic/gin"
 	"net/http"
 	"strings"
+
+	"github.com/Everestown/Outfit_backend/internal/pkg/jwt"
+	"github.com/gin-gonic/gin"
 )
 
 func AuthMiddleware(jwtManager *jwt.JWTManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
+		authHeader := strings.TrimSpace(c.GetHeader("Authorization"))
 		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required with Bearer scheme"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "authorization header with Bearer token is required"})
 			c.Abort()
 			return
 		}
 
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		tokenString := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
+		if tokenString == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "bearer token is empty"})
+			c.Abort()
+			return
+		}
+
 		claims, err := jwtManager.ValidateToken(tokenString)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
 			c.Abort()
 			return
 		}

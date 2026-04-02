@@ -1,6 +1,8 @@
 package app
 
 import (
+	"net/http"
+
 	"github.com/Everestown/Outfit_backend/internal/modules/auth"
 	"github.com/Everestown/Outfit_backend/internal/modules/cart"
 	"github.com/Everestown/Outfit_backend/internal/modules/orders"
@@ -17,6 +19,8 @@ import (
 	"github.com/Everestown/Outfit_backend/internal/pkg/middleware"
 	"github.com/Everestown/Outfit_backend/internal/pkg/swagger"
 )
+
+const defaultBodyLimitBytes int64 = 2 << 20 // 2 MiB
 
 type App struct {
 	config   *config.Config
@@ -37,7 +41,11 @@ func NewApp(cfg *config.Config) *App {
 
 	jwtManager := jwt.NewJWTManager(cfg.JWT.Secret, db)
 
-	router := gin.Default()
+	if cfg.Server.Env == "production" {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
+	router := gin.New()
 
 	app := &App{
 		config:   cfg,
@@ -54,8 +62,17 @@ func NewApp(cfg *config.Config) *App {
 }
 
 func (a *App) setupMiddleware() {
+	_ = a.router.SetTrustedProxies(nil)
+
+	a.router.Use(middleware.RequestIDMiddleware())
+	a.router.Use(middleware.SecurityHeadersMiddleware())
+	a.router.Use(middleware.BodyLimitMiddleware(defaultBodyLimitBytes))
 	a.router.Use(gin.Recovery())
 	a.router.Use(middleware.CORSMiddleware(&a.config.CORS))
+
+	a.router.GET("/healthz", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
 
 	if a.config.Server.Env == "development" {
 		swagger.SetupSwagger(a.router)
@@ -80,14 +97,14 @@ func (a *App) RegisterCoreModules() {
 		}
 	}
 	if a.config.Modules.Enabled["cart"] {
-		err := a.RegisterModule(cart.NewCartModule(a.db))
+		err := a.RegisterModule(cart.NewCartModule(a.db, a.jwt))
 		if err != nil {
 			a.logger.Error("Failed to register cart module", logger.Err(err))
 			return
 		}
 	}
 	if a.config.Modules.Enabled["orders"] {
-		err := a.RegisterModule(orders.NewOrdersModule(a.db))
+		err := a.RegisterModule(orders.NewOrdersModule(a.db, a.jwt))
 		if err != nil {
 			a.logger.Error("Failed to register orders module", logger.Err(err))
 			return
@@ -114,7 +131,7 @@ func (a *App) SetupRouter() {
 	api := a.router.Group("/api")
 
 	for _, m := range a.registry.GetAllModules() {
-		m.RegisterRoutes(api.Group("/" + m.GetName()))
+		m.RegisterRoutes(api)
 	}
 }
 

@@ -1,31 +1,25 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/Everestown/Outfit_backend/internal/modules/auth/dto"
 	"github.com/Everestown/Outfit_backend/internal/modules/auth/service"
-	"github.com/Everestown/Outfit_backend/internal/pkg/jwt"
+	"github.com/Everestown/Outfit_backend/internal/pkg/httpx"
 	"github.com/gin-gonic/gin"
 )
 
 type Handler struct {
-	service    service.Service
-	jwtManager *jwt.JWTManager
+	service service.Service
 }
 
-func NewHandler(s service.Service, jwtManager *jwt.JWTManager) *Handler {
-	return &Handler{
-		service:    s,
-		jwtManager: jwtManager,
-	}
+func NewHandler(s service.Service) *Handler {
+	return &Handler{service: s}
 }
 
 func (h *Handler) Register(c *gin.Context) {
 	var req dto.RegisterRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if !httpx.BindJSON(c, &req) {
 		return
 	}
 
@@ -46,12 +40,9 @@ func (h *Handler) Register(c *gin.Context) {
 func (h *Handler) Login(c *gin.Context) {
 	var req dto.LoginRequest
 
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if !httpx.BindJSON(c, &req) {
 		return
 	}
-
-	fmt.Printf("REQ: %+v\n", req)
 
 	ctx := dto.SessionContext{
 		IP:         getClientIP(c),
@@ -71,8 +62,7 @@ func (h *Handler) Refresh(c *gin.Context) {
 	var req struct {
 		RefreshToken string `json:"refresh_token" binding:"required"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if !httpx.BindJSON(c, &req) {
 		return
 	}
 
@@ -92,10 +82,6 @@ func (h *Handler) Refresh(c *gin.Context) {
 
 func (h *Handler) Logout(c *gin.Context) {
 	userID := c.GetUint("user_id")
-	if userID == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-		return
-	}
 
 	if err := h.service.Logout(userID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -107,10 +93,6 @@ func (h *Handler) Logout(c *gin.Context) {
 
 func (h *Handler) Profile(c *gin.Context) {
 	userID := c.GetUint("user_id")
-	if userID == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-		return
-	}
 
 	user, err := h.service.GetUserByID(userID)
 	if err != nil {
@@ -123,11 +105,8 @@ func (h *Handler) Profile(c *gin.Context) {
 
 func getClientIP(c *gin.Context) string {
 	ip := c.ClientIP()
-
-	// localhost "::1"
 	if ip == "::1" {
 		return "127.0.0.1"
 	}
-
 	return ip
 }

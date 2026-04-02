@@ -1,6 +1,91 @@
-info:
-  version: ""
-  title: ""
-  contact: {}
-paths: {}
 swagger: "2.0"
+info:
+  title: Outfit Backend API
+  version: "1.0"
+basePath: /api
+paths:
+  /auth/register:
+    post:
+      summary: Register user
+  /auth/login:
+    post:
+      summary: Login user
+  /auth/refresh:
+    post:
+      summary: Refresh token
+  /auth/logout:
+    post:
+      summary: Logout user
+      security:
+        - BearerAuth: []
+  /auth/profile:
+    get:
+      summary: Current profile
+      security:
+        - BearerAuth: []
+  /products:
+    get:
+      summary: List products
+  /products/{id}:
+    get:
+      summary: Get product by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          type: integer
+  /categories:
+    get:
+      summary: List categories
+  /categories/tree:
+    get:
+      summary: Category tree
+  /cart:
+    get:
+      summary: Get user cart
+      security:
+        - BearerAuth: []
+  /cart/items:
+    post:
+      summary: Add cart item
+      security:
+        - BearerAuth: []
+  /cart/items/{id}:
+    delete:
+      summary: Remove cart item
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          type: integer
+  /orders:
+    get:
+      summary: List my orders
+      security:
+        - BearerAuth: []
+    post:
+      summary: Create order
+      security:
+        - BearerAuth: []
+  /orders/my:
+    get:
+      summary: List my orders (compat)
+      security:
+        - BearerAuth: []
+  /orders/{id}:
+    get:
+      summary: Get order by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          type: integer
+securityDefinitions:
+  BearerAuth:
+    type: apiKey
+    name: Authorization
+    in: header

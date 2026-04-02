@@ -1,11 +1,14 @@
 package handlers
 
 import (
-	"github.com/Everestown/Outfit_backend/internal/modules/cart/service"
+	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/Everestown/Outfit_backend/internal/modules/cart/dto"
+	"github.com/Everestown/Outfit_backend/internal/modules/cart/service"
+	"github.com/Everestown/Outfit_backend/internal/pkg/apperrors"
+	"github.com/Everestown/Outfit_backend/internal/pkg/httpx"
 	"github.com/gin-gonic/gin"
 )
 
@@ -19,14 +22,10 @@ func NewHandler(service service.Service) *Handler {
 
 func (h *Handler) GetCart(c *gin.Context) {
 	userID := c.GetUint("user_id")
-	if userID == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-		return
-	}
 
 	cart, err := h.service.GetCartByUserID(userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch cart"})
 		return
 	}
 
@@ -35,19 +34,14 @@ func (h *Handler) GetCart(c *gin.Context) {
 
 func (h *Handler) AddItem(c *gin.Context) {
 	userID := c.GetUint("user_id")
-	if userID == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-		return
-	}
 
 	var req dto.AddItemRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if !httpx.BindJSON(c, &req) {
 		return
 	}
 
 	if err := h.service.AddItemToCart(userID, req.VariantID, req.Quantity); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to add item"})
 		return
 	}
 
@@ -56,10 +50,6 @@ func (h *Handler) AddItem(c *gin.Context) {
 
 func (h *Handler) RemoveItem(c *gin.Context) {
 	userID := c.GetUint("user_id")
-	if userID == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-		return
-	}
 
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -68,7 +58,14 @@ func (h *Handler) RemoveItem(c *gin.Context) {
 	}
 
 	if err := h.service.RemoveItemFromCart(userID, uint(id)); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		switch {
+		case errors.Is(err, apperrors.ErrNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"error": "item not found"})
+		case errors.Is(err, apperrors.ErrForbidden):
+			c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to remove item"})
+		}
 		return
 	}
 

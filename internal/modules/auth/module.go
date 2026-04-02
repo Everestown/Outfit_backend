@@ -22,7 +22,7 @@ type AuthModule struct {
 func NewAuthModule(db *gorm.DB, jwtManager *jwt.JWTManager) module.Module {
 	repo := repository.NewRepository(db)
 	svc := service.NewService(repo, jwtManager)
-	h := handlers.NewHandler(svc, jwtManager)
+	h := handlers.NewHandler(svc)
 
 	return &AuthModule{
 		BaseModule: module.BaseModule{Name: "auth"},
@@ -37,11 +37,12 @@ func (m *AuthModule) Init() error {
 }
 
 func (m *AuthModule) RegisterRoutes(router *gin.RouterGroup) {
-	router.POST("/register", m.handler.Register)
-	router.POST("/login", m.handler.Login)
-	router.POST("/refresh", m.handler.Refresh)
+	authGroup := router.Group("/auth")
+	authGroup.POST("/register", m.handler.Register)
+	authGroup.POST("/login", m.handler.Login)
+	authGroup.POST("/refresh", m.handler.Refresh)
 
-	protected := router.Group("/")
+	protected := authGroup.Group("")
 	protected.Use(middleware.AuthMiddleware(m.jwtManager))
 	{
 		protected.POST("/logout", m.handler.Logout)

@@ -6,17 +6,20 @@ import (
 	"github.com/Everestown/Outfit_backend/internal/modules/orders/handlers"
 	"github.com/Everestown/Outfit_backend/internal/modules/orders/repository"
 	"github.com/Everestown/Outfit_backend/internal/modules/orders/service"
+	"github.com/Everestown/Outfit_backend/internal/pkg/jwt"
+	"github.com/Everestown/Outfit_backend/internal/pkg/middleware"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
 type OrdersModule struct {
 	module.BaseModule
-	db      *gorm.DB
-	handler *handlers.Handler
+	db         *gorm.DB
+	jwtManager *jwt.JWTManager
+	handler    *handlers.Handler
 }
 
-func NewOrdersModule(db *gorm.DB) module.Module {
+func NewOrdersModule(db *gorm.DB, jwtManager *jwt.JWTManager) module.Module {
 	repo := repository.NewRepository(db)
 	svc := service.NewService(repo)
 	h := handlers.NewHandler(svc)
@@ -24,6 +27,7 @@ func NewOrdersModule(db *gorm.DB) module.Module {
 	return &OrdersModule{
 		BaseModule: module.BaseModule{Name: "orders"},
 		db:         db,
+		jwtManager: jwtManager,
 		handler:    h,
 	}
 }
@@ -38,9 +42,12 @@ func (m *OrdersModule) Init() error {
 
 func (m *OrdersModule) RegisterRoutes(router *gin.RouterGroup) {
 	ordersGroup := router.Group("/orders")
+	ordersGroup.Use(middleware.AuthMiddleware(m.jwtManager))
 	{
-		ordersGroup.GET("", m.handler.List)
 		ordersGroup.POST("", m.handler.Create)
+		ordersGroup.GET("", m.handler.List)
+		ordersGroup.GET("/my", m.handler.List)
+		ordersGroup.GET("/:id", m.handler.Get)
 	}
 }
 
