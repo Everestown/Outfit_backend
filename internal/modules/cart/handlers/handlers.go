@@ -1,11 +1,14 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/Everestown/Outfit_backend/internal/modules/cart/dto"
 	"github.com/Everestown/Outfit_backend/internal/modules/cart/service"
+	"github.com/Everestown/Outfit_backend/internal/pkg/apperrors"
+	"github.com/Everestown/Outfit_backend/internal/pkg/httpx"
 	"github.com/gin-gonic/gin"
 )
 
@@ -33,8 +36,7 @@ func (h *Handler) AddItem(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
 	var req dto.AddItemRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if !httpx.BindJSON(c, &req) {
 		return
 	}
 
@@ -56,7 +58,14 @@ func (h *Handler) RemoveItem(c *gin.Context) {
 	}
 
 	if err := h.service.RemoveItemFromCart(userID, uint(id)); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to remove item"})
+		switch {
+		case errors.Is(err, apperrors.ErrNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"error": "item not found"})
+		case errors.Is(err, apperrors.ErrForbidden):
+			c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to remove item"})
+		}
 		return
 	}
 

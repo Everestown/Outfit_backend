@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"errors"
+
 	"github.com/Everestown/Outfit_backend/internal/models"
 	"gorm.io/gorm"
 )
@@ -39,6 +41,9 @@ func (r *repository) GetProductByID(id uint) (*models.Product, error) {
 		Preload("Images").
 		First(&product, id).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return &product, nil

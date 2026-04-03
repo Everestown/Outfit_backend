@@ -1,11 +1,14 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/Everestown/Outfit_backend/internal/modules/orders/dto"
 	"github.com/Everestown/Outfit_backend/internal/modules/orders/service"
+	"github.com/Everestown/Outfit_backend/internal/pkg/apperrors"
+	"github.com/Everestown/Outfit_backend/internal/pkg/httpx"
 	"github.com/gin-gonic/gin"
 )
 
@@ -39,7 +42,11 @@ func (h *Handler) Get(c *gin.Context) {
 
 	order, err := h.service.GetOrderByID(userID, uint(orderID))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "order not found"})
+		if errors.Is(err, apperrors.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "order not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch order"})
 		return
 	}
 
@@ -50,8 +57,7 @@ func (h *Handler) Create(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
 	var req dto.CreateOrderRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if !httpx.BindJSON(c, &req) {
 		return
 	}
 

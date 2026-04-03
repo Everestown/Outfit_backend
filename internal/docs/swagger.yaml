@@ -4,6 +4,12 @@ info:
   version: "1.0"
 basePath: /api
 paths:
+  /readyz:
+    get:
+      summary: Readiness check
+  /healthz:
+    get:
+      summary: Liveness check
   /auth/register:
     post:
       summary: Register user

@@ -1,10 +1,9 @@
 package service
 
 import (
-	"errors"
-
 	"github.com/Everestown/Outfit_backend/internal/models"
 	"github.com/Everestown/Outfit_backend/internal/modules/products/repository"
+	"github.com/Everestown/Outfit_backend/internal/pkg/apperrors"
 )
 
 type CategoryNode struct {
@@ -40,7 +39,7 @@ func (s *service) GetProductByID(id uint) (*models.Product, error) {
 		return nil, err
 	}
 	if product == nil {
-		return nil, errors.New("product not found")
+		return nil, apperrors.ErrNotFound
 	}
 	return product, nil
 }

@@ -1,7 +1,13 @@
 package app
 
 import (
+	"context"
+	"errors"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/Everestown/Outfit_backend/internal/modules/auth"
 	"github.com/Everestown/Outfit_backend/internal/modules/cart"
@@ -20,7 +26,16 @@ import (
 	"github.com/Everestown/Outfit_backend/internal/pkg/swagger"
 )
 
-const defaultBodyLimitBytes int64 = 2 << 20 // 2 MiB
+const (
+	defaultBodyLimitBytes    int64 = 2 << 20 // 2 MiB
+	defaultReadTimeout             = 10 * time.Second
+	defaultReadHeaderTimeout       = 5 * time.Second
+	defaultWriteTimeout            = 30 * time.Second
+	defaultIdleTimeout             = 60 * time.Second
+	defaultShutdownTimeout         = 10 * time.Second
+	defaultRateLimitRPS            = 20
+	defaultRateLimitBurst          = 40
+)
 
 type App struct {
 	config   *config.Config
@@ -65,8 +80,9 @@ func (a *App) setupMiddleware() {
 	_ = a.router.SetTrustedProxies(nil)
 
 	a.router.Use(middleware.RequestIDMiddleware())
+	a.router.Use(middleware.RateLimitMiddleware(intOrDefault(a.config.Server.RateLimitRPS, defaultRateLimitRPS), intOrDefault(a.config.Server.RateLimitBurst, defaultRateLimitBurst)))
 	a.router.Use(middleware.SecurityHeadersMiddleware())
-	a.router.Use(middleware.BodyLimitMiddleware(defaultBodyLimitBytes))
+	a.router.Use(middleware.BodyLimitMiddleware(int64OrDefault(a.config.Server.BodyLimitBytes, defaultBodyLimitBytes)))
 	a.router.Use(gin.Recovery())
 	a.router.Use(middleware.CORSMiddleware(&a.config.CORS))
 
@@ -74,11 +90,18 @@ func (a *App) setupMiddleware() {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
+	a.router.GET("/readyz", func(c *gin.Context) {
+		dbErr := a.db.WithContext(c.Request.Context()).Exec("SELECT 1").Error
+		if dbErr != nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "degraded"})
+		}
+
+		c.JSON(http.StatusOK, gin.H{"status": "ready"})
+	})
+
 	if a.config.Server.Env == "development" {
 		swagger.SetupSwagger(a.router)
 	}
-}
-
 func (a *App) RegisterCoreModules() {
 	a.logger.Info("Modules enabled", zap.Any("enabled", a.config.Modules.Enabled))
 
@@ -137,9 +160,60 @@ func (a *App) SetupRouter() {
 
 func (a *App) Run() error {
 	a.SetupRouter()
-	return a.router.Run(a.config.Server.Address)
+
+	srv := &http.Server{
+		Addr:              a.config.Server.Address,
+		Handler:           a.router,
+		ReadTimeout:       secondsOrDefault(a.config.Server.ReadTimeoutSec, defaultReadTimeout),
+		ReadHeaderTimeout: secondsOrDefault(a.config.Server.ReadHeaderTimeoutSec, defaultReadHeaderTimeout),
+		WriteTimeout:      secondsOrDefault(a.config.Server.WriteTimeoutSec, defaultWriteTimeout),
+		IdleTimeout:       secondsOrDefault(a.config.Server.IdleTimeoutSec, defaultIdleTimeout),
+	}
+
+	errCh := make(chan error, 1)
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			errCh <- err
+		}
+	}()
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+
+	select {
+	case err := <-errCh:
+		return err
+	case <-sigCh:
+		ctx, cancel := context.WithTimeout(context.Background(), secondsOrDefault(a.config.Server.ShutdownTimeoutSec, defaultShutdownTimeout))
+		defer cancel()
+		if err := srv.Shutdown(ctx); err != nil {
+			return err
+		}
+		return nil
+	}
 }
 
 func (a *App) Close() {
 	a.registry.CloseAll()
+}
+
+func secondsOrDefault(value int, fallback time.Duration) time.Duration {
+	if value <= 0 {
+		return fallback
+	}
+	return time.Duration(value) * time.Second
+}
+
+func int64OrDefault(value, fallback int64) int64 {
+	if value <= 0 {
+		return fallback
+	}
+	return value
+}
+
+func intOrDefault(value, fallback int) int {
+	if value <= 0 {
+		return fallback
+	}
+	return value
 }

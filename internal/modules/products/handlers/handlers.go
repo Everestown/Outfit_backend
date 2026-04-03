@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/Everestown/Outfit_backend/internal/modules/products/service"
+	"github.com/Everestown/Outfit_backend/internal/pkg/apperrors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -35,7 +37,11 @@ func (h *Handler) Get(c *gin.Context) {
 
 	product, err := h.service.GetProductByID(uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "product not found"})
+		if errors.Is(err, apperrors.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "product not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch product"})
 		return
 	}
 

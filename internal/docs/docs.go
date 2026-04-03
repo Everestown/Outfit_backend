@@ -12,6 +12,8 @@ const docTemplate = `{
     },
     "basePath": "/api",
     "paths": {
+        "/healthz": {"get": {"summary": "Liveness check"}},
+        "/readyz": {"get": {"summary": "Readiness check"}},
         "/auth/register": {"post": {"summary": "Register user"}},
         "/auth/login": {"post": {"summary": "Login user"}},
         "/auth/refresh": {"post": {"summary": "Refresh token"}},

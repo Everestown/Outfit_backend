@@ -5,6 +5,7 @@ import (
 
 	"github.com/Everestown/Outfit_backend/internal/modules/auth/dto"
 	"github.com/Everestown/Outfit_backend/internal/modules/auth/service"
+	"github.com/Everestown/Outfit_backend/internal/pkg/httpx"
 	"github.com/gin-gonic/gin"
 )
 
@@ -18,8 +19,7 @@ func NewHandler(s service.Service) *Handler {
 
 func (h *Handler) Register(c *gin.Context) {
 	var req dto.RegisterRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if !httpx.BindJSON(c, &req) {
 		return
 	}
 
@@ -40,8 +40,7 @@ func (h *Handler) Register(c *gin.Context) {
 func (h *Handler) Login(c *gin.Context) {
 	var req dto.LoginRequest
 
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if !httpx.BindJSON(c, &req) {
 		return
 	}
 
@@ -63,8 +62,7 @@ func (h *Handler) Refresh(c *gin.Context) {
 	var req struct {
 		RefreshToken string `json:"refresh_token" binding:"required"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if !httpx.BindJSON(c, &req) {
 		return
 	}
 

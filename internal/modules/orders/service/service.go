@@ -1,11 +1,10 @@
 package service
 
 import (
-	"errors"
-
 	"github.com/Everestown/Outfit_backend/internal/models"
 	"github.com/Everestown/Outfit_backend/internal/modules/orders/dto"
 	"github.com/Everestown/Outfit_backend/internal/modules/orders/repository"
+	"github.com/Everestown/Outfit_backend/internal/pkg/apperrors"
 )
 
 type Service interface {
@@ -32,7 +31,7 @@ func (s *service) GetOrderByID(userID uint, orderID uint) (*models.Order, error)
 		return nil, err
 	}
 	if order == nil {
-		return nil, errors.New("order not found")
+		return nil, apperrors.ErrNotFound
 	}
 	return order, nil
 }

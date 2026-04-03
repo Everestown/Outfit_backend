@@ -14,8 +14,16 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Address string
-	Env     string
+	Address              string
+	Env                  string
+	BodyLimitBytes       int64
+	ReadTimeoutSec       int
+	ReadHeaderTimeoutSec int
+	WriteTimeoutSec      int
+	IdleTimeoutSec       int
+	ShutdownTimeoutSec   int
+	RateLimitRPS         int
+	RateLimitBurst       int
 }
 type DatabaseConfig struct {
 	URL string
@@ -43,15 +51,6 @@ func Load() *Config {
 		// Используем env vars
 	}
 
-	// Преобразование map[string]any в map[string]bool
-	/*enabledModules := make(map[string]bool)
-	if rawModules := viper.GetStringMap("modules.enabled"); rawModules != nil {
-		for key, value := range rawModules {
-			if boolVal, ok := value.(bool); ok {
-				enabledModules[key] = boolVal
-			}
-		}
-	}*/
 	enabledModules := map[string]bool{
 		"auth":     viper.GetBool("modules.enabled.auth"),
 		"products": viper.GetBool("modules.enabled.products"),
@@ -61,8 +60,16 @@ func Load() *Config {
 
 	return &Config{
 		Server: ServerConfig{
-			Address: viper.GetString("server.address"),
-			Env:     viper.GetString("server.env"),
+			Address:              viper.GetString("server.address"),
+			Env:                  viper.GetString("server.env"),
+			BodyLimitBytes:       viper.GetInt64("server.body_limit_bytes"),
+			ReadTimeoutSec:       viper.GetInt("server.read_timeout_sec"),
+			ReadHeaderTimeoutSec: viper.GetInt("server.read_header_timeout_sec"),
+			WriteTimeoutSec:      viper.GetInt("server.write_timeout_sec"),
+			IdleTimeoutSec:       viper.GetInt("server.idle_timeout_sec"),
+			ShutdownTimeoutSec:   viper.GetInt("server.shutdown_timeout_sec"),
+			RateLimitRPS:         viper.GetInt("server.rate_limit_rps"),
+			RateLimitBurst:       viper.GetInt("server.rate_limit_burst"),
 		},
 		Database: DatabaseConfig{
 			URL: viper.GetString("database.url"),

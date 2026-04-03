@@ -6,26 +6,145 @@
   },
   "basePath": "/api",
   "paths": {
-    "/auth/register": {"post": {"summary": "Register user"}},
-    "/auth/login": {"post": {"summary": "Login user"}},
-    "/auth/refresh": {"post": {"summary": "Refresh token"}},
-    "/auth/logout": {"post": {"summary": "Logout user", "security": [{"BearerAuth": []}]}},
-    "/auth/profile": {"get": {"summary": "Current profile", "security": [{"BearerAuth": []}]}},
-    "/products": {"get": {"summary": "List products"}},
-    "/products/{id}": {"get": {"summary": "Get product by ID"}},
-    "/categories": {"get": {"summary": "List categories"}},
-    "/categories/tree": {"get": {"summary": "Category tree"}},
-    "/cart": {"get": {"summary": "Get user cart", "security": [{"BearerAuth": []}]}},
-    "/cart/items": {"post": {"summary": "Add cart item", "security": [{"BearerAuth": []}]}},
-    "/cart/items/{id}": {"delete": {"summary": "Remove cart item", "security": [{"BearerAuth": []}] }},
-    "/orders": {
-      "get": {"summary": "List my orders", "security": [{"BearerAuth": []}]},
-      "post": {"summary": "Create order", "security": [{"BearerAuth": []}]}
+    "/auth/register": {
+      "post": {
+        "summary": "Register user"
+      }
     },
-    "/orders/my": {"get": {"summary": "List my orders (compat)", "security": [{"BearerAuth": []}]}},
-    "/orders/{id}": {"get": {"summary": "Get order by ID", "security": [{"BearerAuth": []}]}}
+    "/auth/login": {
+      "post": {
+        "summary": "Login user"
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "summary": "Refresh token"
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "summary": "Logout user",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/auth/profile": {
+      "get": {
+        "summary": "Current profile",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/products": {
+      "get": {
+        "summary": "List products"
+      }
+    },
+    "/products/{id}": {
+      "get": {
+        "summary": "Get product by ID"
+      }
+    },
+    "/categories": {
+      "get": {
+        "summary": "List categories"
+      }
+    },
+    "/categories/tree": {
+      "get": {
+        "summary": "Category tree"
+      }
+    },
+    "/cart": {
+      "get": {
+        "summary": "Get user cart",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/cart/items": {
+      "post": {
+        "summary": "Add cart item",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/cart/items/{id}": {
+      "delete": {
+        "summary": "Remove cart item",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/orders": {
+      "get": {
+        "summary": "List my orders",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "Create order",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/orders/my": {
+      "get": {
+        "summary": "List my orders (compat)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/orders/{id}": {
+      "get": {
+        "summary": "Get order by ID",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/healthz": {
+      "get": {
+        "summary": "Liveness check"
+      }
+    },
+    "/readyz": {
+      "get": {
+        "summary": "Readiness check"
+      }
+    }
   },
   "securityDefinitions": {
-    "BearerAuth": {"type": "apiKey", "name": "Authorization", "in": "header"}
+    "BearerAuth": {
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header"
+    }
   }
 }
