@@ -94,7 +94,6 @@ func (a *App) setupMiddleware() {
 		dbErr := a.db.WithContext(c.Request.Context()).Exec("SELECT 1").Error
 		if dbErr != nil {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "degraded"})
-			return
 		}
 
 		c.JSON(http.StatusOK, gin.H{"status": "ready"})
@@ -103,8 +102,6 @@ func (a *App) setupMiddleware() {
 	if a.config.Server.Env == "development" {
 		swagger.SetupSwagger(a.router)
 	}
-}
-
 func (a *App) RegisterCoreModules() {
 	a.logger.Info("Modules enabled", zap.Any("enabled", a.config.Modules.Enabled))
 
