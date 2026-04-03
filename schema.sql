@@ -245,5 +245,5 @@ CREATE TABLE store.user_sessions (
 );
 
 -- INITIAL DATA
-INSERT INTO admin.admin_roles (name) VALUES ('senior admin'), ('junior admin'), ('ghost');
+INSERT INTO admin.admin_roles (name) VALUES ('admin'), ('manager');
 INSERT INTO store.user_roles (name) VALUES ('buyer');

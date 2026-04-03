@@ -102,6 +102,8 @@ func (a *App) setupMiddleware() {
 	if a.config.Server.Env == "development" {
 		swagger.SetupSwagger(a.router)
 	}
+}
+
 func (a *App) RegisterCoreModules() {
 	a.logger.Info("Modules enabled", zap.Any("enabled", a.config.Modules.Enabled))
 
