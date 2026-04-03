@@ -1,10 +1,12 @@
 package handlers
 
 import (
-	"github.com/Everestown/Outfit_backend/internal/modules/products/service"
+	"errors"
 	"net/http"
 	"strconv"
 
+	"github.com/Everestown/Outfit_backend/internal/modules/products/service"
+	"github.com/Everestown/Outfit_backend/internal/pkg/apperrors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -19,7 +21,7 @@ func NewHandler(service service.Service) *Handler {
 func (h *Handler) List(c *gin.Context) {
 	products, err := h.service.GetAllProducts()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch products"})
 		return
 	}
 
@@ -35,9 +37,33 @@ func (h *Handler) Get(c *gin.Context) {
 
 	product, err := h.service.GetProductByID(uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		if errors.Is(err, apperrors.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "product not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch product"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"product": product})
+}
+
+func (h *Handler) ListCategories(c *gin.Context) {
+	categories, err := h.service.GetAllCategories()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch categories"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"categories": categories})
+}
+
+func (h *Handler) CategoryTree(c *gin.Context) {
+	categories, err := h.service.GetCategoryTree()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to build category tree"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"categories": categories})
 }

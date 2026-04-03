@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/Everestown/Outfit_backend/internal/models"
+	"github.com/Everestown/Outfit_backend/internal/pkg/apperrors"
 	"gorm.io/gorm"
 )
 
@@ -23,16 +24,21 @@ func NewRepository(db *gorm.DB) Repository {
 
 func (r *repository) GetCartByUserID(userID uint) (*models.Cart, error) {
 	var cart models.Cart
-	err := r.db.Preload("Items.Variant").
-		Where("user_id = ?", userID).
-		First(&cart).Error
-	return &cart, err
+	if err := r.db.Where("user_id = ?", userID).FirstOrCreate(&cart, models.Cart{UserID: userID}).Error; err != nil {
+		return nil, err
+	}
+
+	if err := r.db.Preload("Items.Variant").First(&cart, cart.ID).Error; err != nil {
+		return nil, err
+	}
+
+	return &cart, nil
 }
 
 func (r *repository) AddItemToCart(userID uint, variantID uint, quantity int) error {
 	var cart models.Cart
 	if err := r.db.Where("user_id = ?", userID).
-		FirstOrCreate(&cart).Error; err != nil {
+		FirstOrCreate(&cart, models.Cart{UserID: userID}).Error; err != nil {
 		return err
 	}
 
@@ -49,7 +55,9 @@ func (r *repository) AddItemToCart(userID uint, variantID uint, quantity int) er
 	}
 
 	if item.Quantity != quantity {
-		r.db.Model(&item).Update("quantity", quantity)
+		if err := r.db.Model(&item).Update("quantity", quantity).Error; err != nil {
+			return err
+		}
 	}
 
 	return r.db.Model(&cart).
@@ -59,11 +67,14 @@ func (r *repository) AddItemToCart(userID uint, variantID uint, quantity int) er
 func (r *repository) RemoveItemFromCart(userID uint, itemID uint) error {
 	var item models.CartItem
 	if err := r.db.Preload("Cart").First(&item, itemID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return apperrors.ErrNotFound
+		}
 		return err
 	}
 
 	if item.Cart.UserID != userID {
-		return errors.New("item does not belong to user")
+		return apperrors.ErrForbidden
 	}
 
 	if err := r.db.Delete(&item).Error; err != nil {

@@ -4,10 +4,12 @@ import (
 	"github.com/Everestown/Outfit_backend/internal/models"
 	"github.com/Everestown/Outfit_backend/internal/modules/orders/dto"
 	"github.com/Everestown/Outfit_backend/internal/modules/orders/repository"
+	"github.com/Everestown/Outfit_backend/internal/pkg/apperrors"
 )
 
 type Service interface {
 	GetUserOrders(userID uint) ([]models.Order, error)
+	GetOrderByID(userID uint, orderID uint) (*models.Order, error)
 	CreateOrder(userID uint, req dto.CreateOrderRequest) (*models.Order, error)
 }
 
@@ -21,6 +23,17 @@ func NewService(repo repository.Repository) Service {
 
 func (s *service) GetUserOrders(userID uint) ([]models.Order, error) {
 	return s.repo.GetUserOrders(userID)
+}
+
+func (s *service) GetOrderByID(userID uint, orderID uint) (*models.Order, error) {
+	order, err := s.repo.GetOrderByID(userID, orderID)
+	if err != nil {
+		return nil, err
+	}
+	if order == nil {
+		return nil, apperrors.ErrNotFound
+	}
+	return order, nil
 }
 
 func (s *service) CreateOrder(userID uint, req dto.CreateOrderRequest) (*models.Order, error) {

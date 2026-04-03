@@ -40,11 +40,10 @@ func (m *ProductsModule) Init() error {
 }
 
 func (m *ProductsModule) RegisterRoutes(router *gin.RouterGroup) {
-	productsGroup := router.Group("/products")
-	{
-		productsGroup.GET("", m.handler.List)
-		productsGroup.GET("/:id", m.handler.Get)
-	}
+	router.GET("/products", m.handler.List)
+	router.GET("/products/:id", m.handler.Get)
+	router.GET("/categories", m.handler.ListCategories)
+	router.GET("/categories/tree", m.handler.CategoryTree)
 }
 
 func (m *ProductsModule) Close() error {

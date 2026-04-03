@@ -7,11 +7,22 @@ import (
 )
 
 func CORSMiddleware(cfg *config.CORSConfig) gin.HandlerFunc {
-	return cors.New(cors.Config{
-		AllowOrigins:     cfg.AllowedOrigins,
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		ExposeHeaders:    []string{"Content-Length"},
+	origins := cfg.AllowedOrigins
+	if len(origins) == 0 && gin.Mode() != gin.ReleaseMode {
+		origins = []string{"http://localhost:3000"}
+	}
+
+	corsCfg := cors.Config{
+		AllowOrigins:     origins,
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", RequestIDHeader},
+		ExposeHeaders:    []string{"Content-Length", RequestIDHeader},
 		AllowCredentials: true,
-	})
+	}
+
+	if len(origins) == 0 {
+		corsCfg.AllowOriginFunc = func(string) bool { return false }
+	}
+
+	return cors.New(corsCfg)
 }
